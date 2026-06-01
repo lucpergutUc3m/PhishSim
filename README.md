@@ -1,16 +1,32 @@
-# React + Vite
+# PhishSim
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación web de concienciación en phishing desarrollada como TFM en la UC3M.  
+Permite lanzar campañas de simulación y que los participantes consulten su evolución.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Frontend:** React 19 + Vite 8, desplegado en Vercel
+- **Backend:** FastAPI en Azure (proxy transparente vía `vercel.json`)
+- **Motor de phishing:** GoPhish
 
-## React Compiler
+## Desarrollo local
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+npm run dev
+```
 
-## Expanding the ESLint configuration
+Crea un `.env` con:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```
+VITE_API_URL=http://localhost:8000
+```
+
+En producción `VITE_API_URL` se deja vacío — las llamadas a `/api/*` van al backend Azure a través de las rewrites de Vercel.
+
+## Scripts
+
+```bash
+npm run build   # Build de producción
+npm run lint    # ESLint
+```
