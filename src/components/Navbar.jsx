@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { UserPlus, LogIn, BarChart2, LayoutDashboard, LogOut, ShieldCheck, User, Settings } from 'lucide-react'
+import { UserPlus, LogIn, BarChart2, LayoutDashboard, LogOut, ShieldCheck, Settings } from 'lucide-react'
 
 function UserMenu({ user, onLogout }) {
   const [open, setOpen] = useState(false)

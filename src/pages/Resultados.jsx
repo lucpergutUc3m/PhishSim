@@ -56,6 +56,7 @@ export default function Resultados() {
   // Si hay sesión activa, carga los resultados automáticamente
   useEffect(() => {
     if (!user?.email) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFetching(true)
     getUserResults(user.email)
       .then(setData)

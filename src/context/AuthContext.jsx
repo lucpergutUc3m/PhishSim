@@ -41,7 +41,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   const logout = useCallback(async () => {
-    try { await apiLogout() } catch { }
+    try { await apiLogout() } catch { /* ignore logout error */ }
     setIsAdmin(false); setUsername(null)
   }, [])
 
@@ -59,7 +59,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   const participantLogout = useCallback(async () => {
-    try { await apiParticipantLogout() } catch { }
+    try { await apiParticipantLogout() } catch { /* ignore logout error */ }
     setUser(null)
   }, [])
 
