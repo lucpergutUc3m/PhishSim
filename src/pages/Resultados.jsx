@@ -156,13 +156,20 @@ export default function Resultados() {
   }
 
   // ── Dashboard ─────────────────────────────────────────────────────────
-  const puntuacion = data ? score(data.results) : null
+  // Solo mostramos campañas con las que el participante ya interactuó:
+  // ocultar 'Email Sent' / 'Email Opened' hasta que haya acción visible.
+  const REVEALED = new Set(['Clicked Link', 'Submitted Data', 'Email Reported'])
+  const visible = (data?.results ?? []).filter((r) => REVEALED.has(r.status))
+
+  const puntuacion = data ? score(visible) : null
   const barData = data
-    ? Object.keys(STATUS_LABELS).map((k) => ({
-        name: STATUS_LABELS[k],
-        value: (data.results ?? []).filter((r) => r.status === k).length,
-        fill: STATUS_COLOR[k],
-      }))
+    ? Object.keys(STATUS_LABELS)
+        .filter((k) => REVEALED.has(k))
+        .map((k) => ({
+          name: STATUS_LABELS[k],
+          value: visible.filter((r) => r.status === k).length,
+          fill: STATUS_COLOR[k],
+        }))
     : []
 
   const initial = (user.first_name?.[0] ?? user.email?.[0] ?? '?').toUpperCase()
@@ -183,9 +190,9 @@ export default function Resultados() {
 
       {fetchError && <div className="alert alert-error" style={{ marginBottom: '1.5rem' }}>{fetchError}</div>}
 
-      {!fetchError && !data?.results?.length && (
+      {!fetchError && data && !visible.length && (
         <div className="alert alert-info" style={{ marginBottom: '1.5rem' }}>
-          Todavía no tienes campañas registradas.
+          Todavía no has interactuado con ninguna campaña.
         </div>
       )}
 
@@ -208,7 +215,7 @@ export default function Resultados() {
           <div className="result-card">
             <h2>Perfil de respuesta</h2>
             <ResponsiveContainer width="100%" height={220}>
-              <RadarChart data={radarData(data.results)}>
+              <RadarChart data={radarData(visible)}>
                 <PolarGrid stroke="#334155" />
                 <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 12 }} />
                 <Radar dataKey="A" stroke="#6366f1" fill="#6366f1" fillOpacity={0.4} />
@@ -218,7 +225,7 @@ export default function Resultados() {
 
           <div className="result-card wide">
             <h2>Historial de campañas</h2>
-            {data.results?.length ? (
+            {visible.length ? (
               <>
                 <ResponsiveContainer width="100%" height={180}>
                   <BarChart data={barData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
@@ -235,7 +242,7 @@ export default function Resultados() {
                     <tr><th>Campaña</th><th>Canal</th><th>Estado</th><th>Fecha</th></tr>
                   </thead>
                   <tbody>
-                    {data.results.map((r, i) => (
+                    {visible.map((r, i) => (
                       <tr key={i}>
                         <td>{r.campaign ?? '-'}</td>
                         <td>
