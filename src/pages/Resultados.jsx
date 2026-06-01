@@ -131,6 +131,9 @@ export default function Resultados() {
               {authLoading ? 'Entrando…' : 'Entrar'}
             </button>
             <p className="muted" style={{ textAlign: 'center', fontSize: '.82rem' }}>
+              <a href="/forgot-password" style={{ color: 'var(--muted)' }}>¿Olvidaste tu contraseña?</a>
+            </p>
+            <p className="muted" style={{ textAlign: 'center', fontSize: '.82rem' }}>
               ¿Aún no participas?{' '}
               <a href="/registro" style={{ color: 'var(--accent-light)' }}>Regístrate aquí</a>
             </p>

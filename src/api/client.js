@@ -52,6 +52,12 @@ export const updateParticipant = (data) =>
 export const deleteParticipant = () =>
   request('/api/auth/participant/delete', { method: 'DELETE' })
 
+export const forgotPassword = (email) =>
+  request('/api/auth/participant/forgot-password', { method: 'POST', body: JSON.stringify({ email }) })
+
+export const resetPassword = (token, password) =>
+  request('/api/auth/participant/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) })
+
 // Public registration — backend handles the full GoPhish flow
 export const registerUser = (data) =>
   request('/api/register', {

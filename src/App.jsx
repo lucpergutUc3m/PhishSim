@@ -8,6 +8,8 @@ import Admin from './pages/Admin'
 import Terminos from './pages/Terminos'
 import Perfil from './pages/Perfil'
 import Phishing from './pages/Phishing'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 
 export default function App() {
   return (
@@ -23,6 +25,8 @@ export default function App() {
             <Route path="/terminos" element={<Terminos />} />
             <Route path="/perfil" element={<Perfil />} />
             <Route path="/phishing" element={<Phishing />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
           </Routes>
         </main>
       </AuthProvider>
