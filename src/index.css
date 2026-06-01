@@ -458,6 +458,7 @@ input.input-error { border-color: var(--danger); }
   /* Margen derecho general en páginas */
   .page, .results-page, .admin-page, .legal-page { padding-left: 1rem; padding-right: 1rem; }
 
+  
   .page-centered { padding: 1.25rem 1rem; align-items: flex-start; }
 
   /* Menos padding interno en formularios */
