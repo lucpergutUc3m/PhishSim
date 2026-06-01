@@ -34,15 +34,15 @@ function resolveStatus(r) {
 }
 
 function score(results = []) {
-  let s = 100
+  let s = 0
   for (const r of results) {
     const st = resolveStatus(r)
-    if (st === 'Clicked Link')   s -= 30
-    if (st === 'Submitted Data') s -= 40
-    if (st === 'Email Reported') s += 20
-    if (st === 'No Clicked')     s += 10
+    if (st === 'No Clicked')     s = Math.min(100, s + 10)
+    if (st === 'Email Reported') s = Math.min(100, s + 20)
+    if (st === 'Clicked Link')   s = Math.max(0, s - 30)
+    if (st === 'Submitted Data') s = Math.max(0, s - 40)
   }
-  return Math.max(0, Math.min(100, s))
+  return s
 }
 
 function radarData(results = []) {
