@@ -449,8 +449,9 @@ input.input-error { border-color: var(--danger); }
   /* Página de resultados en móvil */
   .results-page { padding: 1.5rem 1rem; }
   .results-user-header { flex-wrap: wrap; gap: .75rem; }
-  .results-change-btn { margin-left: 0; width: 100%; justify-content: center; }
+  .results-change-btn { margin-left: 0; flex: 1 0 100%; justify-content: center; }
   .results-user-info h1 { font-size: 1.2rem; }
+  .result-card { padding: 1rem; overflow: hidden; }
 
   /* Tabla horizontal scrollable */
   .results-table { display: block; overflow-x: auto; white-space: nowrap; }
