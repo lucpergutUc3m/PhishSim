@@ -42,7 +42,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     try {
       await apiLogout()
-    } catch (_) {
+    } catch {
       // aunque falle, limpiamos el estado local
     }
     setIsAdmin(false)
@@ -58,4 +58,5 @@ export function AuthProvider({ children }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext)

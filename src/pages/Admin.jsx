@@ -270,6 +270,7 @@ export default function Admin() {
     }
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (isAdmin) loadData()
   }, [isAdmin, loadData])

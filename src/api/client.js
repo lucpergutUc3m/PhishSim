@@ -18,7 +18,8 @@ async function request(path, options = {}) {
     }
     return res.json()
   } catch (e) {
-    if (e.name === 'AbortError') throw new Error('La petición tardó demasiado. Inténtalo de nuevo.')
+    // eslint-disable-next-line preserve-caught-error
+    if (e.name === 'AbortError') throw new Error('La petición tardó demasiado. Inténtalo de nuevo.', { cause: e })
     throw e
   } finally {
     clearTimeout(timer)
