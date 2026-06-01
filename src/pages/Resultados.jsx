@@ -58,7 +58,7 @@ export default function Resultados() {
     if (!user) return
     if (!user.email) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setFetchError('DEBUG campos recibidos: ' + JSON.stringify(Object.keys(user)))
+      setFetchError('No se pudo leer tu email de sesión. Cierra sesión y vuelve a entrar.')
       return
     }
     setFetching(true)

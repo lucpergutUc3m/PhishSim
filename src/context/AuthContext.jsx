@@ -8,8 +8,11 @@ import {
 const AuthContext = createContext(null)
 
 function normalizeParticipant(d) {
-  console.log('[participant/me]', JSON.stringify(d))
-  return { ...d, email: d.email ?? d.sub ?? null }
+  const p = d.participant ?? d
+  return {
+    ...p,
+    email: p.email ?? d.email ?? d.sub ?? null,
+  }
 }
 
 export function AuthProvider({ children }) {
