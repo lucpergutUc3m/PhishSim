@@ -9,6 +9,8 @@ const STEPS = ['Datos personales', 'Confirmación']
 const INITIAL = {
   nombre: '',
   email: '',
+  password: '',
+  passwordConfirm: '',
   edad: '',
   cargo: '',
   telefono: '',
@@ -48,6 +50,8 @@ export default function Registro() {
     const e = {}
     if (!form.nombre.trim()) e.nombre = 'Requerido'
     if (!form.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) e.email = 'Email no válido'
+    if (form.password.length < 8) e.password = 'Mínimo 8 caracteres'
+    if (form.password !== form.passwordConfirm) e.passwordConfirm = 'Las contraseñas no coinciden'
     const edad = Number(form.edad)
     if (!form.edad || edad < 18 || edad > 110) e.edad = 'Debe ser entre 18 y 110'
     if (!form.acepta) e.acepta = 'Debes aceptar para continuar'
@@ -70,6 +74,7 @@ export default function Registro() {
         first_name,
         last_name,
         email: form.email,
+        password: form.password,
         edad: Number(form.edad),
         position: form.cargo || undefined,
         telefono: form.telefono || undefined,
@@ -132,6 +137,22 @@ export default function Registro() {
               value={form.email}
               onChange={(v) => set('email', v)}
               error={errors.email}
+            />
+            <Field
+              label="Contraseña *"
+              type="password"
+              placeholder="Mínimo 8 caracteres"
+              value={form.password}
+              onChange={(v) => set('password', v)}
+              error={errors.password}
+            />
+            <Field
+              label="Confirmar contraseña *"
+              type="password"
+              placeholder="Repite la contraseña"
+              value={form.passwordConfirm}
+              onChange={(v) => set('passwordConfirm', v)}
+              error={errors.passwordConfirm}
             />
             <Field
               label="Edad *"

@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Cell,
 } from 'recharts'
 import { getUserResults } from '../api/client'
-import { Mail, LogIn, Loader2, RefreshCw } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import { Mail, Lock, LogIn, Loader2, RefreshCw, Eye, EyeOff } from 'lucide-react'
 
 const STATUS_LABELS = {
   'Email Sent': 'Enviado',
@@ -44,43 +45,32 @@ function radarData(results = []) {
 }
 
 export default function Resultados() {
+  const { user, participantLogin, participantLogout, loading: authLoading, error: authError } = useAuth()
   const [email, setEmail] = useState('')
-  const [submittedEmail, setSubmittedEmail] = useState(null)
+  const [password, setPassword] = useState('')
+  const [showPass, setShowPass] = useState(false)
   const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
+  const [fetching, setFetching] = useState(false)
+  const [fetchError, setFetchError] = useState(null)
 
-  async function buscar(target) {
-    setLoading(true)
-    setError(null)
-    setData(null)
-    try {
-      const res = await getUserResults(target)
-      setData(res)
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Si hay sesión activa, carga los resultados automáticamente
+  useEffect(() => {
+    if (!user?.email) return
+    setFetching(true)
+    getUserResults(user.email)
+      .then(setData)
+      .catch((e) => setFetchError(e.message))
+      .finally(() => setFetching(false))
+  }, [user])
 
-  function submit(e) {
+  async function handleLogin(e) {
     e.preventDefault()
-    if (!email.trim()) return
-    const target = email.trim()
-    setSubmittedEmail(target)
-    buscar(target)
+    await participantLogin(email, password)
+    setPassword('')
   }
 
-  function reset() {
-    setEmail('')
-    setSubmittedEmail(null)
-    setData(null)
-    setError(null)
-  }
-
-  // ── Estado login ──────────────────────────────────────────────────────────
-  if (!submittedEmail && !loading) {
+  // ── Sin sesión: formulario de login ───────────────────────────────────
+  if (!user) {
     return (
       <div className="page-centered">
         <div className="form-card" style={{ maxWidth: 400 }}>
@@ -90,10 +80,10 @@ export default function Resultados() {
               <span className="results-login-brand-name">PhishSim</span>
             </div>
             <h1 style={{ marginTop: '1.25rem' }}>Iniciar sesión</h1>
-            <p>Accede con tu email para ver tus resultados.</p>
+            <p>Accede con tu cuenta para ver tus resultados.</p>
           </div>
-          <form className="form-body" onSubmit={submit}>
-            {error && <div className="alert alert-error">{error}</div>}
+          <form className="form-body" onSubmit={handleLogin}>
+            {authError && <div className="alert alert-error">{authError}</div>}
             <div className="field">
               <label>Correo electrónico</label>
               <div className="input-icon-wrap">
@@ -103,15 +93,37 @@ export default function Resultados() {
                   placeholder="tu@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  style={{ paddingLeft: '2.4rem' }}
                   autoFocus
                   required
-                  style={{ paddingLeft: '2.4rem' }}
                 />
               </div>
             </div>
-            <button type="submit" className="btn btn-primary btn-full">
-              <LogIn size={16} />
-              Entrar
+            <div className="field">
+              <label>Contraseña</label>
+              <div className="input-icon-wrap">
+                <Lock size={16} className="input-icon" />
+                <input
+                  type={showPass ? 'text' : 'password'}
+                  placeholder="Tu contraseña"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={{ paddingLeft: '2.4rem', paddingRight: '2.4rem' }}
+                  required
+                />
+                <button
+                  type="button"
+                  className="input-icon-right"
+                  onClick={() => setShowPass((s) => !s)}
+                  tabIndex={-1}
+                >
+                  {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+            <button type="submit" className="btn btn-primary btn-full" disabled={authLoading}>
+              {authLoading ? <Loader2 size={16} className="results-spinner-icon" style={{ width: 16, height: 16 }} /> : <LogIn size={16} />}
+              {authLoading ? 'Entrando…' : 'Entrar'}
             </button>
             <p className="muted" style={{ textAlign: 'center', fontSize: '.82rem' }}>
               ¿Aún no participas?{' '}
@@ -123,8 +135,8 @@ export default function Resultados() {
     )
   }
 
-  // ── Estado cargando ───────────────────────────────────────────────────────
-  if (loading) {
+  // ── Cargando resultados ───────────────────────────────────────────────
+  if (fetching) {
     return (
       <div className="page-centered">
         <div style={{ textAlign: 'center' }}>
@@ -135,7 +147,7 @@ export default function Resultados() {
     )
   }
 
-  // ── Dashboard ─────────────────────────────────────────────────────────────
+  // ── Dashboard ─────────────────────────────────────────────────────────
   const puntuacion = data ? score(data.results) : null
   const barData = data
     ? Object.keys(STATUS_LABELS).map((k) => ({
@@ -145,29 +157,27 @@ export default function Resultados() {
       }))
     : []
 
-  const initial = submittedEmail?.[0]?.toUpperCase() ?? '?'
+  const initial = (user.first_name?.[0] ?? user.email?.[0] ?? '?').toUpperCase()
+  const name = [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email
 
   return (
     <div className="page results-page">
-
-      {/* cabecera de usuario */}
       <div className="results-user-header">
         <div className="results-user-avatar">{initial}</div>
         <div className="results-user-info">
           <h1>Mi evolución</h1>
-          <span className="muted">{submittedEmail}</span>
+          <span className="muted">{name} · {user.email}</span>
         </div>
-        <button className="btn btn-outline btn-sm results-change-btn" onClick={reset}>
-          <RefreshCw size={13} />
-          Cambiar email
+        <button className="btn btn-outline btn-sm results-change-btn" onClick={participantLogout}>
+          <RefreshCw size={13} /> Cerrar sesión
         </button>
       </div>
 
-      {error && <div className="alert alert-error" style={{ marginBottom: '1.5rem' }}>{error}</div>}
+      {fetchError && <div className="alert alert-error" style={{ marginBottom: '1.5rem' }}>{fetchError}</div>}
 
-      {!error && !data?.results?.length && (
+      {!fetchError && !data?.results?.length && (
         <div className="alert alert-info" style={{ marginBottom: '1.5rem' }}>
-          No se encontraron datos para ese email.
+          Todavía no tienes campañas registradas.
         </div>
       )}
 
@@ -214,32 +224,23 @@ export default function Resultados() {
                 </ResponsiveContainer>
                 <table className="results-table">
                   <thead>
-                    <tr>
-                      <th>Campaña</th>
-                      <th>Canal</th>
-                      <th>Estado</th>
-                      <th>Fecha</th>
-                    </tr>
+                    <tr><th>Campaña</th><th>Canal</th><th>Estado</th><th>Fecha</th></tr>
                   </thead>
                   <tbody>
                     {data.results.map((r, i) => (
                       <tr key={i}>
                         <td>{r.campaign ?? '-'}</td>
                         <td>
-                          <span
-                            className="status-badge"
+                          <span className="status-badge"
                             style={r.type === 'sms'
                               ? { background: '#0ea5e933', color: '#38bdf8' }
-                              : { background: '#6366f133', color: '#818cf8' }}
-                          >
+                              : { background: '#6366f133', color: '#818cf8' }}>
                             {r.type === 'sms' ? 'SMS' : 'Email'}
                           </span>
                         </td>
                         <td>
-                          <span
-                            className="status-badge"
-                            style={{ background: STATUS_COLOR[r.status] + '33', color: STATUS_COLOR[r.status] }}
-                          >
+                          <span className="status-badge"
+                            style={{ background: STATUS_COLOR[r.status] + '33', color: STATUS_COLOR[r.status] }}>
                             {STATUS_LABELS[r.status] ?? r.status}
                           </span>
                         </td>

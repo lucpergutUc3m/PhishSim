@@ -3,6 +3,10 @@
     {
       "source": "/api/:path*",
       "destination": "https://slmphish-tfm.swedencentral.cloudapp.azure.com:8443/api/:path*"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/index.html"
     }
   ],
   "headers": [

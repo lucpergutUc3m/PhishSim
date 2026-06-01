@@ -37,6 +37,18 @@ export const checkSession = () => request('/api/auth/me')
 export const logout = () =>
   request('/api/auth/logout', { method: 'POST' })
 
+// Auth participantes
+export const participantLogin = (email, password) =>
+  request('/api/auth/participant/login', { method: 'POST', body: JSON.stringify({ email, password }) })
+
+export const checkParticipantSession = () => request('/api/auth/participant/me')
+
+export const participantLogout = () =>
+  request('/api/auth/participant/logout', { method: 'POST' })
+
+export const updateParticipant = (data) =>
+  request('/api/auth/participant/profile', { method: 'PUT', body: JSON.stringify(data) })
+
 // Public registration — backend handles the full GoPhish flow
 export const registerUser = (data) =>
   request('/api/register', {
