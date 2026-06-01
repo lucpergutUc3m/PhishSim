@@ -7,6 +7,10 @@ import {
 
 const AuthContext = createContext(null)
 
+function normalizeParticipant(d) {
+  return { ...d, email: d.email ?? d.sub ?? null }
+}
+
 export function AuthProvider({ children }) {
   const [isAdmin, setIsAdmin]   = useState(false)
   const [username, setUsername] = useState(null)
@@ -21,7 +25,7 @@ export function AuthProvider({ children }) {
         .then((d) => { setIsAdmin(true); setUsername(d.username ?? d.user ?? null) })
         .catch(() => {}),
       checkParticipantSession()
-        .then((d) => setUser(d))
+        .then((d) => setUser(normalizeParticipant(d)))
         .catch(() => {}),
     ]).finally(() => setReady(true))
   }, [])
@@ -51,7 +55,7 @@ export function AuthProvider({ children }) {
     try {
       await apiParticipantLogin(email, password)
       const me = await checkParticipantSession()
-      setUser(me)
+      setUser(normalizeParticipant(me))
       return true
     } catch (e) {
       setError(e.message); return false
@@ -66,7 +70,7 @@ export function AuthProvider({ children }) {
   const refreshParticipant = useCallback(async () => {
     try {
       const me = await checkParticipantSession()
-      setUser(me)
+      setUser(normalizeParticipant(me))
     } catch { /* ignore */ }
   }, [])
 
