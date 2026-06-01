@@ -55,8 +55,12 @@ export default function Resultados() {
 
   // Si hay sesión activa, carga los resultados automáticamente
   useEffect(() => {
-    if (!user?.email) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!user) return
+    if (!user.email) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFetchError('No se pudo leer tu email de sesión. Cierra sesión y vuelve a entrar.')
+      return
+    }
     setFetching(true)
     getUserResults(user.email)
       .then(setData)

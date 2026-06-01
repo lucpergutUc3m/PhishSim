@@ -49,6 +49,9 @@ export const participantLogout = () =>
 export const updateParticipant = (data) =>
   request('/api/auth/participant/profile', { method: 'PUT', body: JSON.stringify(data) })
 
+export const deleteParticipant = () =>
+  request('/api/auth/participant/delete', { method: 'DELETE' })
+
 // Public registration — backend handles the full GoPhish flow
 export const registerUser = (data) =>
   request('/api/register', {

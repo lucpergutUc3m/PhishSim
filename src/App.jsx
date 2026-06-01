@@ -6,6 +6,7 @@ import Registro from './pages/Registro'
 import Resultados from './pages/Resultados'
 import Admin from './pages/Admin'
 import Terminos from './pages/Terminos'
+import Perfil from './pages/Perfil'
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
             <Route path="/resultados" element={<Resultados />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/terminos" element={<Terminos />} />
+            <Route path="/perfil" element={<Perfil />} />
           </Routes>
         </main>
       </AuthProvider>

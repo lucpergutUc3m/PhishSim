@@ -63,12 +63,19 @@ export function AuthProvider({ children }) {
     setUser(null)
   }, [])
 
+  const refreshParticipant = useCallback(async () => {
+    try {
+      const me = await checkParticipantSession()
+      setUser(me)
+    } catch { /* ignore */ }
+  }, [])
+
   if (!ready) return null
 
   return (
     <AuthContext.Provider value={{
       isAdmin, username, login, logout, error, loading,
-      user, participantLogin, participantLogout,
+      user, participantLogin, participantLogout, refreshParticipant,
     }}>
       {children}
     </AuthContext.Provider>
