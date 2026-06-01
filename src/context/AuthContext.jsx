@@ -8,6 +8,7 @@ import {
 const AuthContext = createContext(null)
 
 function normalizeParticipant(d) {
+  console.log('[participant/me]', JSON.stringify(d))
   return { ...d, email: d.email ?? d.sub ?? null }
 }
 
