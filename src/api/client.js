@@ -1,0 +1,78 @@
+const BASE = import.meta.env.VITE_API_URL ?? ''
+
+async function request(path, options = {}) {
+  const headers = { 'Content-Type': 'application/json', ...options.headers }
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 15000) // 15 s máximo
+
+  try {
+    const res = await fetch(`${BASE}${path}`, {
+      ...options,
+      headers,
+      credentials: 'include',
+      signal: controller.signal,
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }))
+      throw new Error(err.detail ?? 'Error del servidor')
+    }
+    return res.json()
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('La petición tardó demasiado. Inténtalo de nuevo.')
+    throw e
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+// Auth
+export const login = (username, password) =>
+  request('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  })
+
+export const checkSession = () => request('/api/auth/me')
+
+export const logout = () =>
+  request('/api/auth/logout', { method: 'POST' })
+
+// Public registration — backend handles the full GoPhish flow
+export const registerUser = (data) =>
+  request('/api/register', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+
+// User results — POST para que el email no aparezca en logs/URL
+export const getUserResults = (email) =>
+  request('/api/user/results', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  })
+
+// Admin — groups
+export const getGroups = () => request('/api/gophish/groups')
+export const updateGroup = (id, targets, phones) =>
+  request(`/api/gophish/groups/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ targets, phones }),
+  })
+export const createGroup = (name, targets) =>
+  request('/api/gophish/groups', {
+    method: 'POST',
+    body: JSON.stringify({ name, targets }),
+  })
+
+// Admin — classify
+export const classifyUsers = (users) =>
+  request('/api/classify-users', {
+    method: 'POST',
+    body: JSON.stringify({ users }),
+  })
+
+// Admin — campaigns summary
+export const getCampaigns = () => request('/api/gophish/campaigns')
+
+// Admin — all registered users
+export const getAllUsers = () => request('/api/users')
