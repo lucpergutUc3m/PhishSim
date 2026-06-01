@@ -458,6 +458,13 @@ input.input-error { border-color: var(--danger); }
   /* Margen derecho general en páginas */
   .page, .results-page, .admin-page, .legal-page { padding-left: 1rem; padding-right: 1rem; }
 
+  .page-centered { padding: 1.25rem 1rem; align-items: flex-start; }
+
+  /* Menos padding interno en formularios */
+  .form-header { padding: 1.5rem 1.25rem 0; }
+  .form-body { padding: 1.25rem 1.25rem 1.5rem; }
+  .danger-zone { padding: 1.25rem 1.25rem 1.5rem; }
+
   /* Dropdown de usuario */
   .user-dropdown { right: -0.5rem; min-width: 190px; }
 }
