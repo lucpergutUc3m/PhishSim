@@ -7,6 +7,7 @@ import Resultados from './pages/Resultados'
 import Admin from './pages/Admin'
 import Terminos from './pages/Terminos'
 import Perfil from './pages/Perfil'
+import Phishing from './pages/Phishing'
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
             <Route path="/admin" element={<Admin />} />
             <Route path="/terminos" element={<Terminos />} />
             <Route path="/perfil" element={<Perfil />} />
+            <Route path="/phishing" element={<Phishing />} />
           </Routes>
         </main>
       </AuthProvider>
