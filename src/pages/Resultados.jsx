@@ -3,9 +3,9 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Cell,
 } from 'recharts'
-import { getUserResults } from '../api/client'
+import { getUserResults, reportCampaign } from '../api/client'
 import { useAuth } from '../context/AuthContext'
-import { Mail, Lock, LogIn, Loader2, RefreshCw, Eye, EyeOff } from 'lucide-react'
+import { Mail, Lock, LogIn, Loader2, RefreshCw, Eye, EyeOff, Flag } from 'lucide-react'
 
 const STATUS_LABELS = {
   'Email Sent': 'Enviado',
@@ -52,6 +52,7 @@ export default function Resultados() {
   const [data, setData] = useState(null)
   const [fetching, setFetching] = useState(false)
   const [fetchError, setFetchError] = useState(null)
+  const [reportedRids, setReportedRids] = useState({}) // rid → 'pending' | 'done' | 'error'
 
   // Si hay sesión activa, carga los resultados automáticamente
   useEffect(() => {
@@ -72,6 +73,17 @@ export default function Resultados() {
     e.preventDefault()
     await participantLogin(email, password)
     setPassword('')
+  }
+
+  async function handleReport(r) {
+    if (!r.rid || reportedRids[r.rid]) return
+    setReportedRids((prev) => ({ ...prev, [r.rid]: 'pending' }))
+    try {
+      await reportCampaign(r.rid)
+      setReportedRids((prev) => ({ ...prev, [r.rid]: 'done' }))
+    } catch {
+      setReportedRids((prev) => ({ ...prev, [r.rid]: 'error' }))
+    }
   }
 
   // ── Sin sesión: formulario de login ───────────────────────────────────
@@ -239,10 +251,15 @@ export default function Resultados() {
                 </ResponsiveContainer>
                 <table className="results-table">
                   <thead>
-                    <tr><th>Campaña</th><th>Canal</th><th>Estado</th><th>Fecha</th></tr>
+                    <tr><th>Campaña</th><th>Canal</th><th>Estado</th><th>Fecha</th><th></th></tr>
                   </thead>
                   <tbody>
-                    {visible.map((r, i) => (
+                    {visible.map((r, i) => {
+                      const reported = r.status === 'Email Reported' || reportedRids[r.rid] === 'done'
+                      const pending  = reportedRids[r.rid] === 'pending'
+                      const errored  = reportedRids[r.rid] === 'error'
+                      const effectiveStatus = reported && r.status !== 'Email Reported' ? 'Email Reported' : r.status
+                      return (
                       <tr key={i}>
                         <td>{r.campaign ?? '-'}</td>
                         <td>
@@ -255,13 +272,27 @@ export default function Resultados() {
                         </td>
                         <td>
                           <span className="status-badge"
-                            style={{ background: STATUS_COLOR[r.status] + '33', color: STATUS_COLOR[r.status] }}>
-                            {STATUS_LABELS[r.status] ?? r.status}
+                            style={{ background: STATUS_COLOR[effectiveStatus] + '33', color: STATUS_COLOR[effectiveStatus] }}>
+                            {STATUS_LABELS[effectiveStatus] ?? effectiveStatus}
                           </span>
                         </td>
                         <td>{r.time ? new Date(r.time).toLocaleDateString('es-ES') : '-'}</td>
+                        <td>
+                          {!reported && r.rid && (
+                            <button
+                              className="btn btn-sm btn-outline"
+                              style={errored ? { borderColor: 'var(--danger)', color: 'var(--danger)' } : {}}
+                              onClick={() => handleReport(r)}
+                              disabled={pending}
+                              title="Reportar como phishing"
+                            >
+                              <Flag size={12} />
+                              {pending ? 'Reportando…' : errored ? 'Error' : 'Reportar'}
+                            </button>
+                          )}
+                        </td>
                       </tr>
-                    ))}
+                    )})}
                   </tbody>
                 </table>
               </>
