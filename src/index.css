@@ -421,6 +421,26 @@ input.input-error { border-color: var(--danger); }
 
 .legal-footer { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: center; }
 
+/* ── Report banner ── */
+.report-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  background: rgba(245,158,11,.07); border: 1px solid rgba(245,158,11,.25);
+  border-radius: var(--radius); padding: .9rem 1.25rem; margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+.report-banner-text {
+  display: flex; align-items: center; gap: .5rem;
+  color: var(--warn); font-size: .92rem; font-weight: 500;
+}
+.report-banner-ok { color: var(--success); font-size: .9rem; font-weight: 600; }
+.report-banner-form { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.report-brand-input {
+  padding: .4rem .75rem; border-radius: 8px; font-size: .88rem;
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  width: 240px; outline: none;
+}
+.report-brand-input:focus { border-color: var(--accent); }
+
 /* ── Perfil page ── */
 .danger-zone {
   border-top: 1px solid var(--border);

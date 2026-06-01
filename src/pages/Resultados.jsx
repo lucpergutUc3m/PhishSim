@@ -52,7 +52,8 @@ export default function Resultados() {
   const [data, setData] = useState(null)
   const [fetching, setFetching] = useState(false)
   const [fetchError, setFetchError] = useState(null)
-  const [reportedRids, setReportedRids] = useState({}) // rid → 'pending' | 'done' | 'error'
+  const [reportState, setReportState] = useState('idle') // idle | inputting | pending | done | error
+  const [reportBrand, setReportBrand] = useState('')
 
   // Si hay sesión activa, carga los resultados automáticamente
   useEffect(() => {
@@ -75,15 +76,15 @@ export default function Resultados() {
     setPassword('')
   }
 
-  async function handleReport(r) {
-    const key = r._key ?? r.rid ?? r.campaign
-    if (!key || reportedRids[key] === 'pending' || reportedRids[key] === 'done') return
-    setReportedRids((prev) => ({ ...prev, [key]: 'pending' }))
+  async function handleReport(e) {
+    e.preventDefault()
+    if (!reportBrand.trim()) return
+    setReportState('pending')
     try {
-      await reportCampaign({ rid: r.rid, campaign: r.campaign })
-      setReportedRids((prev) => ({ ...prev, [key]: 'done' }))
+      await reportCampaign({ email: user.email, brand: reportBrand.trim() })
+      setReportState('done')
     } catch {
-      setReportedRids((prev) => ({ ...prev, [key]: 'error' }))
+      setReportState('error')
     }
   }
 
@@ -203,6 +204,40 @@ export default function Resultados() {
 
       {fetchError && <div className="alert alert-error" style={{ marginBottom: '1.5rem' }}>{fetchError}</div>}
 
+      {/* ── Reportar email sospechoso ── */}
+      <div className="report-banner">
+        <div className="report-banner-text">
+          <Flag size={16} />
+          <span>¿Has recibido un email o SMS sospechoso?</span>
+        </div>
+        {reportState === 'done' ? (
+          <span className="report-banner-ok">✓ Reporte enviado, ¡buen trabajo!</span>
+        ) : reportState === 'inputting' || reportState === 'pending' || reportState === 'error' ? (
+          <form className="report-banner-form" onSubmit={handleReport}>
+            <input
+              type="text"
+              className="report-brand-input"
+              placeholder="¿Qué marca imitaba? (ej. PayPal, HBO Max…)"
+              value={reportBrand}
+              onChange={(e) => setReportBrand(e.target.value)}
+              autoFocus
+              disabled={reportState === 'pending'}
+            />
+            <button type="submit" className="btn btn-sm btn-primary" disabled={reportState === 'pending' || !reportBrand.trim()}>
+              {reportState === 'pending' ? 'Enviando…' : 'Enviar'}
+            </button>
+            <button type="button" className="btn btn-sm btn-outline" onClick={() => { setReportState('idle'); setReportBrand('') }} disabled={reportState === 'pending'}>
+              Cancelar
+            </button>
+            {reportState === 'error' && <span style={{ color: 'var(--danger)', fontSize: '.82rem' }}>Error, inténtalo de nuevo.</span>}
+          </form>
+        ) : (
+          <button className="btn btn-sm btn-outline" onClick={() => setReportState('inputting')}>
+            Sí, reportar
+          </button>
+        )}
+      </div>
+
       {!fetchError && data && !visible.length && (
         <div className="alert alert-info" style={{ marginBottom: '1.5rem' }}>
           Todavía no has interactuado con ninguna campaña.
@@ -252,16 +287,10 @@ export default function Resultados() {
                 </ResponsiveContainer>
                 <table className="results-table">
                   <thead>
-                    <tr><th>Campaña</th><th>Canal</th><th>Estado</th><th>Fecha</th><th></th></tr>
+                    <tr><th>Campaña</th><th>Canal</th><th>Estado</th><th>Fecha</th></tr>
                   </thead>
                   <tbody>
-                    {visible.map((r, i) => {
-                      const key      = r.rid ?? r.campaign ?? i
-                      const reported = r.status === 'Email Reported' || reportedRids[key] === 'done'
-                      const pending  = reportedRids[key] === 'pending'
-                      const errored  = reportedRids[key] === 'error'
-                      const effectiveStatus = reported && r.status !== 'Email Reported' ? 'Email Reported' : r.status
-                      return (
+                    {visible.map((r, i) => (
                       <tr key={i}>
                         <td>{r.campaign ?? '-'}</td>
                         <td>
@@ -274,27 +303,13 @@ export default function Resultados() {
                         </td>
                         <td>
                           <span className="status-badge"
-                            style={{ background: STATUS_COLOR[effectiveStatus] + '33', color: STATUS_COLOR[effectiveStatus] }}>
-                            {STATUS_LABELS[effectiveStatus] ?? effectiveStatus}
+                            style={{ background: STATUS_COLOR[r.status] + '33', color: STATUS_COLOR[r.status] }}>
+                            {STATUS_LABELS[r.status] ?? r.status}
                           </span>
                         </td>
                         <td>{r.time ? new Date(r.time).toLocaleDateString('es-ES') : '-'}</td>
-                        <td>
-                          {!reported && (
-                            <button
-                              className="btn btn-sm btn-outline"
-                              style={errored ? { borderColor: 'var(--danger)', color: 'var(--danger)' } : {}}
-                              onClick={() => handleReport({ ...r, _key: key })}
-                              disabled={pending}
-                              title="Reportar como phishing"
-                            >
-                              <Flag size={12} />
-                              {pending ? 'Reportando…' : errored ? 'Error' : 'Reportar'}
-                            </button>
-                          )}
-                        </td>
                       </tr>
-                    )})}
+                    ))}
                   </tbody>
                 </table>
               </>
