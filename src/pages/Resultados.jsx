@@ -3,44 +3,56 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Cell,
 } from 'recharts'
-import { getUserResults, reportCampaign } from '../api/client'
+import { getUserResults } from '../api/client'
 import { useAuth } from '../context/AuthContext'
-import { Mail, Lock, LogIn, Loader2, RefreshCw, Eye, EyeOff, Flag } from 'lucide-react'
+import { Mail, Lock, LogIn, Loader2, RefreshCw, Eye, EyeOff } from 'lucide-react'
 
 const STATUS_LABELS = {
-  'Email Sent': 'Enviado',
-  'Email Opened': 'Abierto',
-  'Clicked Link': 'Hizo clic',
+  'Clicked Link':   'Hizo clic',
   'Submitted Data': 'Datos capturados',
   'Email Reported': 'Reportado',
+  'No Clicked':     'No caíste ✓',
 }
 
 const STATUS_COLOR = {
-  'Email Sent': '#6b7280',
-  'Email Opened': '#f59e0b',
-  'Clicked Link': '#ef4444',
+  'Clicked Link':   '#ef4444',
   'Submitted Data': '#dc2626',
   'Email Reported': '#22c55e',
+  'No Clicked':     '#22c55e',
+}
+
+function isExpired(r) {
+  if (r.status !== 'Email Sent' && r.status !== 'Email Opened') return false
+  if (!r.time) return false
+  return (Date.now() - new Date(r.time).getTime()) / 3_600_000 >= 24
+}
+
+function resolveStatus(r) {
+  if (r.status === 'Clicked Link' || r.status === 'Submitted Data' || r.status === 'Email Reported') return r.status
+  if (isExpired(r)) return 'No Clicked'
+  return null
 }
 
 function score(results = []) {
   let s = 100
   for (const r of results) {
-    if (r.status === 'Clicked Link') s -= 30
-    if (r.status === 'Submitted Data') s -= 40
-    if (r.status === 'Email Reported') s += 20
+    const st = resolveStatus(r)
+    if (st === 'Clicked Link')   s -= 30
+    if (st === 'Submitted Data') s -= 40
+    if (st === 'Email Reported') s += 20
+    if (st === 'No Clicked')     s += 10
   }
   return Math.max(0, Math.min(100, s))
 }
 
 function radarData(results = []) {
-  const count = (key) => results.filter((r) => r.status === key).length
+  const count = (key) => results.filter((r) => resolveStatus(r) === key).length
   return [
-    { subject: 'Detectados', A: count('Email Reported') * 10 },
-    { subject: 'Sin clic', A: results.filter((r) => r.status === 'Email Sent' || r.status === 'Email Opened').length * 10 },
-    { subject: 'Apertura', A: 10 - count('Email Opened') * 2 },
-    { subject: 'No datos', A: 10 - count('Submitted Data') * 5 },
-    { subject: 'Alerta', A: count('Email Reported') * 5 },
+    { subject: 'Detectados',  A: count('Email Reported') * 10 },
+    { subject: 'No cayeron',  A: count('No Clicked') * 10 },
+    { subject: 'No datos',    A: 10 - count('Submitted Data') * 5 },
+    { subject: 'Sin clic',    A: (count('Email Reported') + count('No Clicked')) * 5 },
+    { subject: 'Alerta',      A: count('Email Reported') * 5 },
   ]
 }
 
@@ -52,8 +64,6 @@ export default function Resultados() {
   const [data, setData] = useState(null)
   const [fetching, setFetching] = useState(false)
   const [fetchError, setFetchError] = useState(null)
-  const [reportState, setReportState] = useState('idle') // idle | inputting | pending | done | error
-  const [reportBrand, setReportBrand] = useState('')
 
   // Si hay sesión activa, carga los resultados automáticamente
   useEffect(() => {
@@ -74,18 +84,6 @@ export default function Resultados() {
     e.preventDefault()
     await participantLogin(email, password)
     setPassword('')
-  }
-
-  async function handleReport(e) {
-    e.preventDefault()
-    if (!reportBrand.trim()) return
-    setReportState('pending')
-    try {
-      await reportCampaign({ email: user.email, brand: reportBrand.trim() })
-      setReportState('done')
-    } catch {
-      setReportState('error')
-    }
   }
 
   // ── Sin sesión: formulario de login ───────────────────────────────────
@@ -170,20 +168,15 @@ export default function Resultados() {
   }
 
   // ── Dashboard ─────────────────────────────────────────────────────────
-  // Solo mostramos campañas con las que el participante ya interactuó:
-  // ocultar 'Email Sent' / 'Email Opened' hasta que haya acción visible.
-  const REVEALED = new Set(['Clicked Link', 'Submitted Data', 'Email Reported'])
-  const visible = (data?.results ?? []).filter((r) => REVEALED.has(r.status))
+  const visible = (data?.results ?? []).filter((r) => resolveStatus(r) !== null)
 
   const puntuacion = data ? score(visible) : null
   const barData = data
-    ? Object.keys(STATUS_LABELS)
-        .filter((k) => REVEALED.has(k))
-        .map((k) => ({
-          name: STATUS_LABELS[k],
-          value: visible.filter((r) => r.status === k).length,
-          fill: STATUS_COLOR[k],
-        }))
+    ? Object.keys(STATUS_LABELS).map((k) => ({
+        name: STATUS_LABELS[k],
+        value: visible.filter((r) => resolveStatus(r) === k).length,
+        fill: STATUS_COLOR[k],
+      }))
     : []
 
   const initial = (user.first_name?.[0] ?? user.email?.[0] ?? '?').toUpperCase()
@@ -203,40 +196,6 @@ export default function Resultados() {
       </div>
 
       {fetchError && <div className="alert alert-error" style={{ marginBottom: '1.5rem' }}>{fetchError}</div>}
-
-      {/* ── Reportar email sospechoso ── */}
-      <div className="report-banner">
-        <div className="report-banner-text">
-          <Flag size={16} />
-          <span>¿Has recibido un email o SMS sospechoso?</span>
-        </div>
-        {reportState === 'done' ? (
-          <span className="report-banner-ok">✓ Reporte enviado, ¡buen trabajo!</span>
-        ) : reportState === 'inputting' || reportState === 'pending' || reportState === 'error' ? (
-          <form className="report-banner-form" onSubmit={handleReport}>
-            <input
-              type="text"
-              className="report-brand-input"
-              placeholder="¿Qué marca imitaba? (ej. PayPal, HBO Max…)"
-              value={reportBrand}
-              onChange={(e) => setReportBrand(e.target.value)}
-              autoFocus
-              disabled={reportState === 'pending'}
-            />
-            <button type="submit" className="btn btn-sm btn-primary" disabled={reportState === 'pending' || !reportBrand.trim()}>
-              {reportState === 'pending' ? 'Enviando…' : 'Enviar'}
-            </button>
-            <button type="button" className="btn btn-sm btn-outline" onClick={() => { setReportState('idle'); setReportBrand('') }} disabled={reportState === 'pending'}>
-              Cancelar
-            </button>
-            {reportState === 'error' && <span style={{ color: 'var(--danger)', fontSize: '.82rem' }}>Error, inténtalo de nuevo.</span>}
-          </form>
-        ) : (
-          <button className="btn btn-sm btn-outline" onClick={() => setReportState('inputting')}>
-            Sí, reportar
-          </button>
-        )}
-      </div>
 
       {!fetchError && data && !visible.length && (
         <div className="alert alert-info" style={{ marginBottom: '1.5rem' }}>
@@ -290,26 +249,29 @@ export default function Resultados() {
                     <tr><th>Campaña</th><th>Canal</th><th>Estado</th><th>Fecha</th></tr>
                   </thead>
                   <tbody>
-                    {visible.map((r, i) => (
-                      <tr key={i}>
-                        <td>{r.campaign ?? '-'}</td>
-                        <td>
-                          <span className="status-badge"
-                            style={r.type === 'sms'
-                              ? { background: '#0ea5e933', color: '#38bdf8' }
-                              : { background: '#6366f133', color: '#818cf8' }}>
-                            {r.type === 'sms' ? 'SMS' : 'Email'}
-                          </span>
-                        </td>
-                        <td>
-                          <span className="status-badge"
-                            style={{ background: STATUS_COLOR[r.status] + '33', color: STATUS_COLOR[r.status] }}>
-                            {STATUS_LABELS[r.status] ?? r.status}
-                          </span>
-                        </td>
-                        <td>{r.time ? new Date(r.time).toLocaleDateString('es-ES') : '-'}</td>
-                      </tr>
-                    ))}
+                    {visible.map((r, i) => {
+                      const st = resolveStatus(r)
+                      return (
+                        <tr key={i}>
+                          <td>{r.campaign ?? '-'}</td>
+                          <td>
+                            <span className="status-badge"
+                              style={r.type === 'sms'
+                                ? { background: '#0ea5e933', color: '#38bdf8' }
+                                : { background: '#6366f133', color: '#818cf8' }}>
+                              {r.type === 'sms' ? 'SMS' : 'Email'}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="status-badge"
+                              style={{ background: STATUS_COLOR[st] + '33', color: STATUS_COLOR[st] }}>
+                              {STATUS_LABELS[st] ?? st}
+                            </span>
+                          </td>
+                          <td>{r.time ? new Date(r.time).toLocaleDateString('es-ES') : '-'}</td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </>
