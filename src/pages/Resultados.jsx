@@ -76,13 +76,14 @@ export default function Resultados() {
   }
 
   async function handleReport(r) {
-    if (!r.rid || reportedRids[r.rid]) return
-    setReportedRids((prev) => ({ ...prev, [r.rid]: 'pending' }))
+    const key = r._key ?? r.rid ?? r.campaign
+    if (!key || reportedRids[key] === 'pending' || reportedRids[key] === 'done') return
+    setReportedRids((prev) => ({ ...prev, [key]: 'pending' }))
     try {
-      await reportCampaign(r.rid)
-      setReportedRids((prev) => ({ ...prev, [r.rid]: 'done' }))
+      await reportCampaign({ rid: r.rid, campaign: r.campaign })
+      setReportedRids((prev) => ({ ...prev, [key]: 'done' }))
     } catch {
-      setReportedRids((prev) => ({ ...prev, [r.rid]: 'error' }))
+      setReportedRids((prev) => ({ ...prev, [key]: 'error' }))
     }
   }
 
@@ -255,9 +256,10 @@ export default function Resultados() {
                   </thead>
                   <tbody>
                     {visible.map((r, i) => {
-                      const reported = r.status === 'Email Reported' || reportedRids[r.rid] === 'done'
-                      const pending  = reportedRids[r.rid] === 'pending'
-                      const errored  = reportedRids[r.rid] === 'error'
+                      const key      = r.rid ?? r.campaign ?? i
+                      const reported = r.status === 'Email Reported' || reportedRids[key] === 'done'
+                      const pending  = reportedRids[key] === 'pending'
+                      const errored  = reportedRids[key] === 'error'
                       const effectiveStatus = reported && r.status !== 'Email Reported' ? 'Email Reported' : r.status
                       return (
                       <tr key={i}>
@@ -278,11 +280,11 @@ export default function Resultados() {
                         </td>
                         <td>{r.time ? new Date(r.time).toLocaleDateString('es-ES') : '-'}</td>
                         <td>
-                          {!reported && r.rid && (
+                          {!reported && (
                             <button
                               className="btn btn-sm btn-outline"
                               style={errored ? { borderColor: 'var(--danger)', color: 'var(--danger)' } : {}}
-                              onClick={() => handleReport(r)}
+                              onClick={() => handleReport({ ...r, _key: key })}
                               disabled={pending}
                               title="Reportar como phishing"
                             >
