@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Cell,
@@ -67,8 +67,11 @@ export default function Resultados() {
   const [fetchError, setFetchError] = useState(null)
   const [refreshing, setRefreshing] = useState(false)
 
-  async function loadResults(silent = false) {
-    if (!user?.email) return
+  const loadResults = useCallback(async (silent = false) => {
+    if (!user?.email) {
+      if (!silent) setFetchError('No se pudo leer tu email de sesión. Cierra sesión y vuelve a entrar.')
+      return
+    }
     silent ? setRefreshing(true) : setFetching(true)
     try {
       const d = await getUserResults(user.email)
@@ -79,24 +82,19 @@ export default function Resultados() {
     } finally {
       silent ? setRefreshing(false) : setFetching(false)
     }
-  }
+  }, [user?.email])
 
   // Carga inicial
   useEffect(() => {
-    if (!user) return
-    if (!user.email) {
-      setFetchError('No se pudo leer tu email de sesión. Cierra sesión y vuelve a entrar.')
-      return
-    }
-    loadResults()
-  }, [user])
+    if (user !== null) loadResults()
+  }, [loadResults])
 
   // Polling cada 30 s (silencioso, no muestra spinner de carga)
   useEffect(() => {
     if (!user?.email) return
     const id = setInterval(() => loadResults(true), 30_000)
     return () => clearInterval(id)
-  }, [user])
+  }, [loadResults, user?.email])
 
   async function handleLogin(e) {
     e.preventDefault()
