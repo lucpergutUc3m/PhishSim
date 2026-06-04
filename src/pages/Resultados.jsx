@@ -3,9 +3,9 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Cell,
 } from 'recharts'
-import { getUserResults, reportByCode } from '../api/client'
+import { getUserResults } from '../api/client'
 import { useAuth } from '../context/AuthContext'
-import { Mail, Lock, LogIn, Loader2, RefreshCw, Eye, EyeOff, ShieldCheck } from 'lucide-react'
+import { Mail, Lock, LogIn, Loader2, RefreshCw, Eye, EyeOff } from 'lucide-react'
 
 const STATUS_LABELS = {
   'Clicked Link':   'Hizo clic',
@@ -28,6 +28,7 @@ function isExpired(r) {
 }
 
 function resolveStatus(r) {
+  if (r.reported) return 'Email Reported'
   if (r.status === 'Clicked Link' || r.status === 'Submitted Data' || r.status === 'Email Reported') return r.status
   if (isExpired(r)) return 'No Clicked'
   return null
@@ -64,24 +65,37 @@ export default function Resultados() {
   const [data, setData] = useState(null)
   const [fetching, setFetching] = useState(false)
   const [fetchError, setFetchError] = useState(null)
-  const [codeInput, setCodeInput] = useState('')
-  const [codeLoading, setCodeLoading] = useState(false)
-  const [codeSuccess, setCodeSuccess] = useState(false)
-  const [codeError, setCodeError] = useState(null)
+  const [refreshing, setRefreshing] = useState(false)
 
-  // Si hay sesión activa, carga los resultados automáticamente
+  async function loadResults(silent = false) {
+    if (!user?.email) return
+    silent ? setRefreshing(true) : setFetching(true)
+    try {
+      const d = await getUserResults(user.email)
+      setData(d)
+      setFetchError(null)
+    } catch (e) {
+      if (!silent) setFetchError(e.message)
+    } finally {
+      silent ? setRefreshing(false) : setFetching(false)
+    }
+  }
+
+  // Carga inicial
   useEffect(() => {
     if (!user) return
     if (!user.email) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFetchError('No se pudo leer tu email de sesión. Cierra sesión y vuelve a entrar.')
       return
     }
-    setFetching(true)
-    getUserResults(user.email)
-      .then(setData)
-      .catch((e) => setFetchError(e.message))
-      .finally(() => setFetching(false))
+    loadResults()
+  }, [user])
+
+  // Polling cada 30 s (silencioso, no muestra spinner de carga)
+  useEffect(() => {
+    if (!user?.email) return
+    const id = setInterval(() => loadResults(true), 30_000)
+    return () => clearInterval(id)
   }, [user])
 
   async function handleLogin(e) {
@@ -172,26 +186,6 @@ export default function Resultados() {
   }
 
   // ── Dashboard ─────────────────────────────────────────────────────────
-  async function handleCodeReport(e) {
-    e.preventDefault()
-    const rid = codeInput.trim()
-    if (!rid) return
-    setCodeError(null)
-    setCodeSuccess(false)
-    setCodeLoading(true)
-    try {
-      await reportByCode(rid)
-      setCodeSuccess(true)
-      setCodeInput('')
-      const fresh = await getUserResults(user.email)
-      setData(fresh)
-    } catch (err) {
-      setCodeError(err.message)
-    } finally {
-      setCodeLoading(false)
-    }
-  }
-
   const visible = (data?.results ?? []).filter((r) => resolveStatus(r) !== null)
 
   const puntuacion = data ? score(visible) : null
@@ -214,8 +208,16 @@ export default function Resultados() {
           <h1>Mi evolución</h1>
           <span className="muted">{name} · {user.email}</span>
         </div>
+        <button
+          className="btn btn-outline btn-sm"
+          onClick={() => loadResults(true)}
+          disabled={refreshing}
+          title="Actualizar resultados"
+        >
+          <RefreshCw size={13} className={refreshing ? 'results-spinner-icon' : ''} />
+        </button>
         <button className="btn btn-outline btn-sm results-change-btn" onClick={participantLogout}>
-          <RefreshCw size={13} /> Cerrar sesión
+          Cerrar sesión
         </button>
       </div>
 
@@ -226,58 +228,6 @@ export default function Resultados() {
           Todavía no has interactuado con ninguna campaña.
         </div>
       )}
-
-      <div className="result-card wide" style={{ marginBottom: '1.5rem' }}>
-        {codeSuccess ? (
-          <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🚨</div>
-            <h2 style={{ color: '#22c55e', marginBottom: '0.5rem' }}>¡Oh no! ¡Nos has pillado!</h2>
-            <p className="muted" style={{ fontSize: '.9rem' }}>
-              Has identificado correctamente un email de phishing. ¡Buen ojo!
-            </p>
-            <button
-              className="btn btn-outline btn-sm"
-              style={{ marginTop: '1rem' }}
-              onClick={() => setCodeSuccess(false)}
-            >
-              Reportar otro
-            </button>
-          </div>
-        ) : (
-          <>
-            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-              <ShieldCheck size={18} style={{ color: '#6366f1' }} /> ¿Has detectado un phishing?
-            </h2>
-            <p className="muted" style={{ fontSize: '.85rem', marginBottom: '1rem' }}>
-              Introduce el código de referencia que aparece al final del email sospechoso.
-            </p>
-            <form onSubmit={handleCodeReport} style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <input
-                type="text"
-                placeholder="Ej. AbCdEf123"
-                value={codeInput}
-                onChange={(e) => { setCodeInput(e.target.value); setCodeError(null) }}
-                style={{ flex: 1, minWidth: 200, fontFamily: 'monospace' }}
-                disabled={codeLoading}
-                autoComplete="off"
-                spellCheck={false}
-              />
-              <button
-                type="submit"
-                className="btn btn-primary btn-sm"
-                disabled={codeLoading || !codeInput.trim()}
-              >
-                {codeLoading
-                  ? <><Loader2 size={13} className="results-spinner-icon" /> Reportando…</>
-                  : <><ShieldCheck size={13} /> Reportar</>}
-              </button>
-            </form>
-            {codeError && (
-              <p style={{ marginTop: '0.5rem', color: '#ef4444', fontSize: '.85rem' }}>{codeError}</p>
-            )}
-          </>
-        )}
-      </div>
 
       {data && (
         <div className="results-grid">
