@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Cell,
@@ -63,38 +63,25 @@ export default function Resultados() {
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
   const [data, setData] = useState(null)
-  const [fetching, setFetching] = useState(false)
   const [fetchError, setFetchError] = useState(null)
-  const [refreshing, setRefreshing] = useState(false)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
-  const loadResults = useCallback(async (silent = false) => {
-    if (!user?.email) {
-      if (!silent) setFetchError('No se pudo leer tu email de sesión. Cierra sesión y vuelve a entrar.')
-      return
-    }
-    silent ? setRefreshing(true) : setFetching(true)
-    try {
-      const d = await getUserResults(user.email)
-      setData(d)
-      setFetchError(null)
-    } catch (e) {
-      if (!silent) setFetchError(e.message)
-    } finally {
-      silent ? setRefreshing(false) : setFetching(false)
-    }
-  }, [user?.email])
-
-  // Carga inicial
-  useEffect(() => {
-    if (user !== null) loadResults()
-  }, [loadResults])
-
-  // Polling cada 30 s (silencioso, no muestra spinner de carga)
+  // Carga inicial y en cada refresco (manual o por polling)
   useEffect(() => {
     if (!user?.email) return
-    const id = setInterval(() => loadResults(true), 30_000)
+    let cancelled = false
+    getUserResults(user.email)
+      .then(d  => { if (!cancelled) { setData(d); setFetchError(null) } })
+      .catch(e => { if (!cancelled) setFetchError(e.message) })
+    return () => { cancelled = true }
+  }, [user?.email, refreshTrigger])
+
+  // Polling cada 30 s
+  useEffect(() => {
+    if (!user?.email) return
+    const id = setInterval(() => setRefreshTrigger(t => t + 1), 30_000)
     return () => clearInterval(id)
-  }, [loadResults, user?.email])
+  }, [user?.email])
 
   async function handleLogin(e) {
     e.preventDefault()
@@ -172,7 +159,7 @@ export default function Resultados() {
   }
 
   // ── Cargando resultados ───────────────────────────────────────────────
-  if (fetching) {
+  if (!data && !fetchError) {
     return (
       <div className="page-centered">
         <div style={{ textAlign: 'center' }}>
@@ -208,11 +195,10 @@ export default function Resultados() {
         </div>
         <button
           className="btn btn-outline btn-sm"
-          onClick={() => loadResults(true)}
-          disabled={refreshing}
+          onClick={() => setRefreshTrigger(t => t + 1)}
           title="Actualizar resultados"
         >
-          <RefreshCw size={13} className={refreshing ? 'results-spinner-icon' : ''} />
+          <RefreshCw size={13} />
         </button>
         <button className="btn btn-outline btn-sm results-change-btn" onClick={participantLogout}>
           Cerrar sesión
