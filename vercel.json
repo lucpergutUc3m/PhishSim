@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://slmphish-tfm.swedencentral.cloudapp.azure.com/api/:path*"
+      "destination": "http://slmphish-tfm.swedencentral.cloudapp.azure.com/api/:path*"
     },
     {
       "source": "/:path*",
