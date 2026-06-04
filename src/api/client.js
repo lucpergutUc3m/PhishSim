@@ -72,8 +72,11 @@ export const getUserResults = (email) =>
     body: JSON.stringify({ email }),
   })
 
-export const reportCampaign = ({ email, brand }) =>
-  request('/api/user/report', { method: 'POST', body: JSON.stringify({ email, brand }) })
+export const reportCampaign = ({ email, brand, rid }) =>
+  request('/api/user/report', { method: 'POST', body: JSON.stringify({ email, brand, rid }) })
+
+export const reportByCode = (rid) =>
+  request('/api/user/report', { method: 'POST', body: JSON.stringify({ rid }) })
 
 // Admin — groups
 export const getGroups = () => request('/api/gophish/groups')
