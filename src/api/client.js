@@ -72,12 +72,8 @@ export const getUserResults = (email) =>
     body: JSON.stringify({ email }),
   })
 
-export const getUserStats = (email, token) => {
-  console.log('[getUserStats] token:', token)
-  return request(`/api/users/${encodeURIComponent(email)}/stats`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  })
-}
+export const getUserStats = (email) =>
+  request(`/api/users/${encodeURIComponent(email)}/stats`)
 
 export const reportCampaign = ({ email, brand, rid }) =>
   request('/api/user/report', { method: 'POST', body: JSON.stringify({ email, brand, rid }) })

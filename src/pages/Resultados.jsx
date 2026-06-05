@@ -47,7 +47,7 @@ function radarData(results = []) {
 }
 
 export default function Resultados() {
-  const { user, participantToken, participantLogin, participantLogout, loading: authLoading, error: authError } = useAuth()
+  const { user, participantLogin, participantLogout, loading: authLoading, error: authError } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
@@ -62,7 +62,7 @@ export default function Resultados() {
     let cancelled = false
     Promise.all([
       getUserResults(user.email),
-      getUserStats(user.email, participantToken),
+      getUserStats(user.email),
     ])
       .then(([results, stats]) => {
         if (!cancelled) {
@@ -73,7 +73,7 @@ export default function Resultados() {
       })
       .catch(e => { if (!cancelled) setFetchError(e.message) })
     return () => { cancelled = true }
-  }, [user?.email, participantToken, refreshTrigger])
+  }, [user?.email, refreshTrigger])
 
   // Polling cada 30 s
   useEffect(() => {

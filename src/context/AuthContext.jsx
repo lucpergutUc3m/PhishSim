@@ -15,13 +15,10 @@ function normalizeParticipant(d) {
   }
 }
 
-const TOKEN_KEY = 'participant_token'
-
 export function AuthProvider({ children }) {
   const [isAdmin, setIsAdmin]   = useState(false)
   const [username, setUsername] = useState(null)
   const [user, setUser]         = useState(null)   // participante logueado
-  const [participantToken, setParticipantToken] = useState(() => localStorage.getItem(TOKEN_KEY))
   const [ready, setReady]       = useState(false)
   const [error, setError]       = useState(null)
   const [loading, setLoading]   = useState(false)
@@ -32,7 +29,7 @@ export function AuthProvider({ children }) {
         .then((d) => { setIsAdmin(true); setUsername(d.username ?? d.user ?? null) })
         .catch(() => {}),
       checkParticipantSession()
-        .then((d) => { console.log('[AuthContext] participant/me response:', d); setUser(normalizeParticipant(d)) })
+        .then((d) => setUser(normalizeParticipant(d)))
         .catch(() => {}),
     ]).finally(() => setReady(true))
   }, [])
@@ -60,13 +57,7 @@ export function AuthProvider({ children }) {
   const participantLogin = useCallback(async (email, password) => {
     setLoading(true); setError(null)
     try {
-      const loginRes = await apiParticipantLogin(email, password)
-      console.log('[AuthContext] participant login response:', JSON.stringify(loginRes))
-      const token = loginRes?.token ?? loginRes?.access_token ?? null
-      if (token) {
-        localStorage.setItem(TOKEN_KEY, token)
-        setParticipantToken(token)
-      }
+      await apiParticipantLogin(email, password)
       const me = await checkParticipantSession()
       setUser(normalizeParticipant(me))
       return true
@@ -77,8 +68,6 @@ export function AuthProvider({ children }) {
 
   const participantLogout = useCallback(async () => {
     try { await apiParticipantLogout() } catch { /* ignore logout error */ }
-    localStorage.removeItem(TOKEN_KEY)
-    setParticipantToken(null)
     setUser(null)
   }, [])
 
@@ -94,7 +83,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       isAdmin, username, login, logout, error, loading,
-      user, participantToken, participantLogin, participantLogout, refreshParticipant,
+      user, participantLogin, participantLogout, refreshParticipant,
     }}>
       {children}
     </AuthContext.Provider>
