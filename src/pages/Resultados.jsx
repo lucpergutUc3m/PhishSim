@@ -3,7 +3,7 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Cell,
 } from 'recharts'
-import { getUserResults } from '../api/client'
+import { getUserResults, getUserStats } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { Mail, Lock, LogIn, Loader2, RefreshCw, Eye, EyeOff } from 'lucide-react'
 
@@ -34,17 +34,6 @@ function resolveStatus(r) {
   return null
 }
 
-function score(results = []) {
-  let s = 0
-  for (const r of results) {
-    const st = resolveStatus(r)
-    if (st === 'No Clicked')     s = Math.min(100, s + 10)
-    if (st === 'Email Reported') s = Math.min(100, s + 20)
-    if (st === 'Clicked Link')   s = Math.max(0, s - 30)
-    if (st === 'Submitted Data') s = Math.max(0, s - 40)
-  }
-  return s
-}
 
 function radarData(results = []) {
   const count = (key) => results.filter((r) => resolveStatus(r) === key).length
@@ -58,11 +47,12 @@ function radarData(results = []) {
 }
 
 export default function Resultados() {
-  const { user, participantLogin, participantLogout, loading: authLoading, error: authError } = useAuth()
+  const { user, participantToken, participantLogin, participantLogout, loading: authLoading, error: authError } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
   const [data, setData] = useState(null)
+  const [puntuacion, setPuntuacion] = useState(null)
   const [fetchError, setFetchError] = useState(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
@@ -70,11 +60,20 @@ export default function Resultados() {
   useEffect(() => {
     if (!user?.email) return
     let cancelled = false
-    getUserResults(user.email)
-      .then(d  => { if (!cancelled) { setData(d); setFetchError(null) } })
+    Promise.all([
+      getUserResults(user.email),
+      getUserStats(user.email, participantToken),
+    ])
+      .then(([results, stats]) => {
+        if (!cancelled) {
+          setData(results)
+          setPuntuacion(stats.awareness_score ?? null)
+          setFetchError(null)
+        }
+      })
       .catch(e => { if (!cancelled) setFetchError(e.message) })
     return () => { cancelled = true }
-  }, [user?.email, refreshTrigger])
+  }, [user?.email, participantToken, refreshTrigger])
 
   // Polling cada 30 s
   useEffect(() => {
@@ -173,7 +172,6 @@ export default function Resultados() {
   // ── Dashboard ─────────────────────────────────────────────────────────
   const visible = (data?.results ?? []).filter((r) => resolveStatus(r) !== null)
 
-  const puntuacion = data ? score(visible) : null
   const barData = data
     ? Object.keys(STATUS_LABELS).map((k) => ({
         name: STATUS_LABELS[k],
